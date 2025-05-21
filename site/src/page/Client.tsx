@@ -1,6 +1,5 @@
 import { useClient } from 'hooks/useClient';
 import { useParams } from 'react-router';
-import Estimates from './Estimates';
 import AutoUpdateInput from 'components/AutoUpdateInput';
 import { useCallback } from 'react';
 import Breadcrumb from 'components/Breadcrumb';
@@ -69,9 +68,6 @@ export const Client = () => {
           </tr>
         </tbody>
       </table>
-      <div className="mt-4">
-        <Estimates />
-      </div>
     </div>
   );
 };
