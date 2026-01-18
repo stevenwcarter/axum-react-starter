@@ -11,13 +11,13 @@ COPY --from=dependencybuilder /home/rust/src/target ./target/
 COPY src ./src/
 COPY migrations ./migrations/
 RUN touch src/main.rs
+COPY site/build ./site/build
 RUN cargo build --release
 
 FROM scratch
 WORKDIR /
 COPY --from=builder /home/rust/src/target/x86_64-unknown-linux-musl/release/axum-react-starter axum-react-starter
 COPY env.prod .env
-COPY site/build ./site/build
 COPY config.toml.prod-docker config.toml
 
 EXPOSE 4000
