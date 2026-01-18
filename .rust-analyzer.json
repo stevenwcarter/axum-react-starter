@@ -1,0 +1,12 @@
+{
+  "files": {
+    "excludeDirs": [
+      ".direnv",
+      ".git",
+      "target",
+      "site",
+      "node_modules",
+      ".embuild"
+    ]
+  }
+}

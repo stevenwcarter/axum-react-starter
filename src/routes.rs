@@ -3,21 +3,26 @@ use crate::context::GraphQLContext;
 use crate::graphql::{create_schema, Schema};
 
 use axum::extract::{Request, WebSocketUpgrade};
-use axum::http::HeaderValue;
+use axum::http::{self, HeaderValue};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::routing::{get, on, MethodFilter};
 use axum::{Extension, Router};
+use axum_embed::{FallbackBehavior, ServeEmbed};
+use http::Method;
 use juniper_axum::extract::JuniperRequest;
 use juniper_axum::response::JuniperResponse;
 use juniper_axum::{graphiql, playground, subscriptions};
 use juniper_graphql_ws::ConnectionConfig;
-use reqwest::{header, Method};
+use rust_embed::RustEmbed;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::{ServeDir, ServeFile};
+
+#[derive(RustEmbed, Clone)]
+#[folder = "site/build/"]
+struct SiteAssets;
 
 pub fn app(context: GraphQLContext) -> Router {
     let qm_schema = create_schema();
@@ -49,21 +54,20 @@ pub fn app(context: GraphQLContext) -> Router {
         .layer(Extension(context.clone()))
         .layer(Extension(Arc::new(qm_schema)));
 
-    let site_router = Router::new()
-        .nest_service(
-            "/assets",
-            ServiceBuilder::new().service(ServeDir::new("site/build/assets")),
-        )
-        .layer(middleware::from_fn(set_static_cache_control))
-        .nest_service(
-            "/",
-            ServeDir::new("site/build").not_found_service(ServeFile::new("site/build/index.html")),
-        );
+    let serve_assets = ServeEmbed::<SiteAssets>::with_parameters(
+        Some("/index.html".to_owned()),
+        FallbackBehavior::Ok,
+        None,
+    );
+
+    let fallback_serve_assets = serve_assets.clone();
 
     Router::new()
+        .route_service("/assets/{*uri}", serve_assets)
+        .layer(middleware::from_fn(set_static_cache_control))
         .nest("/graphql", graphql_routes)
         .nest("/api/v1", api_routes(context.clone()))
-        .nest("/", site_router)
+        .fallback_service(fallback_serve_assets)
         .layer(Extension(context.clone()))
         .layer(middleware)
 }
@@ -98,7 +102,7 @@ async fn custom_graphql(
 async fn set_static_cache_control(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     response.headers_mut().insert(
-        header::CACHE_CONTROL,
+        http::header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000"),
     );
     response

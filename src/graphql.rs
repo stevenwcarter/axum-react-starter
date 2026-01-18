@@ -75,7 +75,7 @@ impl Mutation {
 //     }
 // }
 
-pub type Schema = RootNode<'static, Query, Mutation, EmptySubscription<GraphQLContext>>;
+pub type Schema = RootNode<Query, Mutation, EmptySubscription<GraphQLContext>>;
 pub fn create_schema() -> Schema {
     Schema::new(Query, Mutation, EmptySubscription::new())
 }
